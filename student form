@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Student Enrollment Form</title>
+<script src="https://login2explore.com/jpdb-commons.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  label { display: block; margin-top: 10px; }
+  input, textarea { width: 300px; padding: 6px; }
+  button { margin-top: 15px; padding: 8px 16px; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<h2>Student Enrollment Form</h2>
+
+<form id="studentForm" onsubmit="return false;">
+  <label for="rollNo">Roll No (Primary Key):</label>
+  <input type="text" id="rollNo" name="rollNo" autofocus />
+
+  <label for="fullName">Full Name:</label>
+  <input type="text" id="fullName" name="fullName" disabled />
+
+  <label for="class">Class:</label>
+  <input type="text" id="class" name="class" disabled />
+
+  <label for="birthDate">Birth Date:</label>
+  <input type="date" id="birthDate" name="birthDate" disabled />
+
+  <label for="address">Address:</label>
+  <textarea id="address" name="address" rows="3" disabled></textarea>
+
+  <label for="enrollDate">Enrollment Date:</label>
+  <input type="date" id="enrollDate" name="enrollDate" disabled />
+
+  <div>
+    <button id="saveBtn" disabled>Save</button>
+    <button id="updateBtn" disabled>Update</button>
+    <button id="resetBtn" disabled>Reset</button>
+  </div>
+</form>
+
+<script>
+  // Database and relation info
+  const dbName = "SCHOOL-DB";
+  const relName = "STUDENT-TABLE";
+  const connToken = "<Your-Connection-Token-Here>"; // Put your actual token here
+
+  // Elements
+  const rollNoEl = document.getElementById("rollNo");
+  const fullNameEl = document.getElementById("fullName");
+  const classEl = document.getElementById("class");
+  const birthDateEl = document.getElementById("birthDate");
+  const addressEl = document.getElementById("address");
+  const enrollDateEl = document.getElementById("enrollDate");
+
+  const saveBtn = document.getElementById("saveBtn");
+  const updateBtn = document.getElementById("updateBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  // Helper to disable all fields except rollNo
+  function disableFieldsExceptRollNo() {
+    fullNameEl.disabled = true;
+    classEl.disabled = true;
+    birthDateEl.disabled = true;
+    addressEl.disabled = true;
+    enrollDateEl.disabled = true;
+    saveBtn.disabled = true;
+    updateBtn.disabled = true;
+    resetBtn.disabled = true;
+  }
+
+  // Enable all except rollNo disabled for update
+  function enableFieldsForNewRecord() {
+    fullNameEl.disabled = false;
+    classEl.disabled = false;
+    birthDateEl.disabled = false;
+    addressEl.disabled = false;
+    enrollDateEl.disabled = false;
+    saveBtn.disabled = false;
+    resetBtn.disabled = false;
+    updateBtn.disabled = true;
+  }
+
+  function enableFieldsForUpdate() {
+    fullNameEl.disabled = false;
+    classEl.disabled = false;
+    birthDateEl.disabled = false;
+    addressEl.disabled = false;
+    enrollDateEl.disabled = false;
+    saveBtn.disabled = true;
+    resetBtn.disabled = false;
+    updateBtn.disabled = false;
+    rollNoEl.disabled = true;
+  }
+
+  // Clear all fields except rollNo
+  function clearFields() {
+    fullNameEl.value = "";
+    classEl.value = "";
+    birthDateEl.value = "";
+    addressEl.value = "";
+    enrollDateEl.value = "";
+  }
+
+  // Reset form to initial state (Step 2 in your description)
+  function resetForm() {
+    rollNoEl.disabled = false;
+    rollNoEl.value = "";
+    clearFields();
+    disableFieldsExceptRollNo();
+    rollNoEl.focus();
+  }
+
+  // Validation function to check empty fields (except rollNo)
+  function isFormValid() {
+    if (
+      fullNameEl.value.trim() === "" ||
+      classEl.value.trim() === "" ||
+      birthDateEl.value.trim() === "" ||
+      addressEl.value.trim() === "" ||
+      enrollDateEl.value.trim() === ""
+    ) {
+      alert("Please fill all fields.");
+      return false;
+    }
+    return true;
+  }
+
+  // Function to create request JSON for GET_BY_KEY
+  function getByKeyRequest(rollNo) {
+    return JSON.stringify({
+      token: connToken,
+      cmd: "GET_BY_KEY",
+      dbName: dbName,
+      rel: relName,
+      jsonStr: {
+        Roll_No: rollNo
+      }
+    });
+  }
+
+  // Function to create request JSON for PUT (insert)
+  function putRequest(data) {
+    return JSON.stringify({
+      token: connToken,
+      cmd: "PUT",
+      dbName: dbName,
+      rel: relName,
+      jsonStr: data
+    });
+  }
+
+  // Function to create request JSON for UPDATE
+  function updateRequest(data) {
+    return JSON.stringify({
+      token: connToken,
+      cmd: "UPDATE",
+      dbName: dbName,
+      rel: relName,
+      jsonStr: data
+    });
+  }
+
+  // Check if roll no exists in DB
+  function checkRollNoExists(rollNo) {
+    if (!rollNo) return;
+
+    let req = getByKeyRequest(rollNo);
+
+    jQuery.ajaxSetup({ async: false });
+    let record = executeCommand(req, connToken, dbName, relName);
+
+    if (record.status === 400) {
+      // Not found, new record
+      clearFields();
+      enableFieldsForNewRecord();
+      fullNameEl.focus();
+    } else if (record.status === 200) {
+      // Record exists, populate form
+      let data = record.data;
+      rollNoEl.value = data.Roll_No || rollNo; // Use key or data value
+      fullNameEl.value = data.Full_Name || "";
+      classEl.value = data.Class || "";
+      birthDateEl.value = data.Birth_Date || "";
+      addressEl.value = data.Address || "";
+      enrollDateEl.value = data.Enrollment_Date || "";
+
+      enableFieldsForUpdate();
+      fullNameEl.focus();
+    } else {
+      alert("Error fetching data.");
+    }
+  }
+
+  // Save new record
+  function saveRecord() {
+    if (!isFormValid()) return;
+
+    let data = {
+      Roll_No: rollNoEl.value.trim(),
+      Full_Name: fullNameEl.value.trim(),
+      Class: classEl.value.trim(),
+      Birth_Date: birthDateEl.value,
+      Address: addressEl.value.trim(),
+      Enrollment_Date: enrollDateEl.value
+    };
+
+    let req = putRequest(data);
+
+    jQuery.ajaxSetup({ async: false });
+    let resp = executeCommand(req, connToken, dbName, relName);
+
+    if (resp.status === 200) {
+      alert("Record saved successfully.");
+      resetForm();
+    } else {
+      alert("Error saving record: " + resp.message);
+    }
+  }
+
+  // Update existing record
+  function updateRecord() {
+    if (!isFormValid()) return;
+
+    let data = {
+      Roll_No: rollNoEl.value.trim(),
+      Full_Name: fullNameEl.value.trim(),
+      Class: classEl.value.trim(),
+      Birth_Date: birthDateEl.value,
+      Address: addressEl.value.trim(),
+      Enrollment_Date: enrollDateEl.value
+    };
+
+    let req = updateRequest(data);
+
+    jQuery.ajaxSetup({ async: false });
+    let resp = executeCommand(req, connToken, dbName, relName);
+
+    if (resp.status === 200) {
+      alert("Record updated successfully.");
+      resetForm();
+    } else {
+      alert("Error updating record: " + resp.message);
+    }
+  }
+
+  // Event listeners
+
+  // When Roll No field loses focus or Enter pressed, check DB
+  rollNoEl.addEventListener("blur", () => {
+    if (rollNoEl.value.trim() !== "") {
+      checkRollNoExists(rollNoEl.value.trim());
+    }
+  });
+
+  rollNoEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (rollNoEl.value.trim() !== "") {
+        checkRollNoExists(rollNoEl.value.trim());
+      }
+    }
+  });
+
+  saveBtn.addEventListener("click", () => saveRecord());
+  updateBtn.addEventListener("click", () => updateRecord());
+  resetBtn.addEventListener("click", () => resetForm());
+
+  // On page load
+  window.onload = () => {
+    resetForm();
+  };
+</script>
+
+</body>
+</html>
