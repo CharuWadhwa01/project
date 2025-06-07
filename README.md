@@ -90,7 +90,7 @@ Dashboard of JsonPowerDB:
 
 Student Enrollment Form (Example UI):
 
-![Student Form Example](https://user-images.githubusercontent.com/yourusername/yourprojectpath/student-form-screenshot.png)  
+![Student Form Example](![project](https://github.com/user-attachments/assets/8975fe4f-4a19-4fcf-ae7f-24826ea36054)
 
 ---
 
